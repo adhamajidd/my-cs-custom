@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>    
+    <template id="report_template_majid">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <!-- Vendor Information Section -->
+                    <div class="row mb-4">
+                        <div class="col-6">
+                            <t t-if="o.dest_address_id">
+                                <strong class="d-block mt-3">Shipping address:</strong>
+                                <div t-field="o.dest_address_id" 
+                                    t-options="{'widget': 'contact', 'fields': ['address', 'name', 'phone'], 'no_marker': True, 'phone_icons': True}"
+                                    name="purchase_shipping_address"></div>
+                            </t>
+                            <t t-else="">
+                                <strong class="d-block mt-3">Shipping address:</strong>
+                                <div t-if="o.picking_type_id and o.picking_type_id.warehouse_id">
+                                    <span t-field="o.picking_type_id.warehouse_id.name"></span>
+                                    <div t-field="o.picking_type_id.warehouse_id.partner_id"
+                                        t-options="{'widget': 'contact', 'fields': ['address', 'phone'], 'no_marker': True, 'phone_icons': True}"></div>
+                                </div>
+                            </t>
+                        </div>
+                        <div class="col-7">
+                            <strong class="d-block mt-3">Vendor Information:</strong>
+                            <div t-field="o.partner_id" 
+                                t-options="{'widget': 'contact', 'fields': ['name', 'address', 'phone'], 'no_marker': True, 'phone_icons': True}"
+                                name="purchase_vendor_address"></div>
+                        </div>
+                    </div>
+
+                    <div class="page">
+                        <div class="oe_structure"></div>
+
+                        <div class="mt-4">
+                            <t t-set="layout_document_title">
+                                <t t-if="o.state in ['draft', 'sent', 'to approve']">Request for Quotation #<span t-field="o.name"></span></t>
+                                <t t-if="o.state in ['purchase', 'done']">Purchase Order #<span t-field="o.name"></span></t>
+                                <t t-if="o.state == 'cancel'">Cancelled Purchase Order #<span t-field="o.name"></span></t>
+                            </t>
+                        </div>
+
+                        <div id="informations" class="row mb-4">
+                            <div t-if="o.user_id" class="col">
+                                <!-- <strong>Buyer</strong>
+                                <div t-field="o.user_id"></div> -->
+                            </div>
+                            <div t-if="o.partner_ref" class="col">
+                                <strong>Your Order Reference</strong>
+                                <div t-field="o.partner_ref"></div>
+                            </div>
+                            <div t-if="o.state in ['purchase','done'] and o.date_approve" class="col-3 bm-2">
+                                <strong>Order Date:</strong>
+                                <p t-field="o.date_approve" t-options="{'date_only': 'true'}" class="m-0"></p>
+                            </div>
+                            <div t-elif="o.date_order" class="col-2 bm-2">
+                                <strong>Order Deadline:</strong>
+                                <p t-field="o.date_order" t-options="{'date_only': 'true'}" class="m-0"></p>
+                            </div>
+                            <div t-if="o.date_planned" class="col-2 bm-2">
+                                <strong>No Quotation :</strong>
+                                <p t-field="o.date_planned" t-options="{'date_only': 'true'}" class="m-0"></p>
+                            </div>
+                        </div>
+
+                        <table class="o_has_total_table table o_main_table table-borderless">
+                            <thead>
+                                <tr>
+                                    <th name="th_description" class="text-start"><strong>Description</strong></th>
+                                    <th name="th_quantity" class="text-end"><strong>Qty</strong></th>
+                                    <th name="th_price_unit" class="text-end"><strong>Unit Price</strong></th>
+                                    <th name="th_discount" class="text-end"><strong>Disc.</strong></th>
+                                    <th name="th_taxes" class="text-end"><strong>Taxes</strong></th>
+                                    <th name="th_subtotal" class="text-end"><strong>Amount</strong></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-set="current_subtotal" t-value="0"></t>
+                                <t t-foreach="o.order_line" t-as="line">
+                                    <t t-set="current_subtotal" t-value="current_subtotal + line.price_subtotal"></t>
+
+                                    <tr t-att-class="'fw-bold o_line_section' if line.display_type == 'line_section' else 'fst-italic o_line_note' if line.display_type == 'line_note' else ''">
+                                        <t t-if="not line.display_type">
+                                            <td id="product" class="text-start">
+                                                <span t-field="line.name"></span>
+                                            </td>
+                                            <td class="text-end">
+                                                <span t-field="line.product_qty"
+                                                t-options='{"widget": "float", "precision":0}'>
+                                                </span>
+                                                <span t-field="line.product_uom.name" groups="uom.group_uom"></span>
+                                                <span t-if="line.product_packaging_id">
+                                                    (<span t-field="line.product_packaging_qty" t-options="{'widget': 'integer'}"></span> <span t-field="line.product_packaging_id"></span>)
+                                                </span>
+                                            </td>
+                                            <td class="text-end">
+                                                <span t-field="line.price_unit"
+                                                t-options='{"widget": "float", "precision":0}'>
+                                                </span>
+                                            </td>
+                                            <td class="text-end">
+                                                <span class="text-align-bottom"><span t-field="line.discount"></span>%</span>
+                                            </td>
+                                            <td class="text-end">
+                                                <span t-out="', '.join([(tax.invoice_label or tax.name) for tax in line.taxes_id])"></span>
+                                            </td>
+                                            <td class="text-end">
+                                                <span t-field="line.price_subtotal" 
+                                                t-options='{"widget": "float", "display_currency": o.currency_id,"precision":0}'></span>
+                                            </td>
+                                        </t>
+                                        <t t-if="line.display_type == 'line_section'">
+                                            <td colspan="99" id="section">
+                                                <span t-field="line.name"></span>
+                                            </td>
+                                            <t t-set="current_section" t-value="line"></t>
+                                            <t t-set="current_subtotal" t-value="0"></t>
+                                        </t>
+                                        <t t-if="line.display_type == 'line_note'">
+                                            <td colspan="99" id="note">
+                                                <span t-field="line.name"></span>
+                                            </td>
+                                        </t>
+                                    </tr>
+                                    <t t-if="current_section and (line_last or o.order_line[line_index+1].display_type == 'line_section')">
+                                        <tr class="is-subtotal text-end">
+                                            <td colspan="99" id="subtotal">
+                                                <strong class="mr16">Subtotal</strong>
+                                                <t t-esc="o.currency_id.position == 'before' and o.currency_id.symbol or ''"/>
+                                                <span t-out="current_subtotal" 
+                                                t-options='{"widget": "float", "display_currency": o.currency_id,"precision":0}'></span>
+                                                <t t-esc="o.currency_id.position == 'after' and o.currency_id.symbol or ''"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </t>
+                            </tbody>
+                        </table>
+
+                        <div id="total" class="row justify-content-end mt-n3">
+                            <div class="col-4">
+                                <table class="o_total_table table table-borderless">
+                                    <tr>
+                                        <td>Total</td>
+                                        <td class="text-right">
+                                            <t t-esc="o.currency_id.position == 'before' and o.currency_id.symbol or ''"/>
+                                            <span t-esc="o.amount_untaxed" 
+                                            t-options='{"widget": "float", "display_currency": o.currency_id,"precision":0}'></span>
+                                            <t t-esc="o.currency_id.position == 'after' and o.currency_id.symbol or ''"/>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>VAT 11%</td>
+                                        <td class="text-right">
+                                            <t t-esc="o.currency_id.position == 'before' and o.currency_id.symbol or ''"/>
+                                            <span t-esc="o.amount_tax" 
+                                            t-options='{"widget": "float", "display_currency": o.currency_id,"precision":0}'></span>
+                                            <t t-esc="o.currency_id.position == 'after' and o.currency_id.symbol or ''"/>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2" style="border-top: 1px solid #000;"></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong style="color: #1F73AF;">Grand Total</strong></td>
+                                        <td class="text-right">
+                                            <strong style="color: #1F73AF;">
+                                                <t t-esc="o.currency_id.position == 'before' and o.currency_id.symbol or ''"/>
+                                                <span t-esc="o.amount_total"
+                                                      t-options='{"widget": "float", "display_currency": o.currency_id,"precision":0}'></span>
+                                                <t t-esc="o.currency_id.position == 'after' and o.currency_id.symbol or ''"/>
+                                            </strong>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+
+                        <p t-field="o.notes" class="mt-4"></p>
+                        <div class="oe_structure"></div>
+
+                        <strong>Payment Terms: </strong>
+                        <span t-field="o.payment_term_id" class="mt-4"></span>
+
+                        <t t-set="base_address" t-value="o.env['ir.config_parameter'].sudo().get_param('web.base.url')"></t>
+                        <t t-set="portal_url" t-value="base_address + '/my/purchase/' + str(o.id) + '#portal_connect_software_modal'"></t>
+                        <div t-if="any(u._is_portal() for u in o.partner_id.user_ids)" class="text-center">
+                            <a t-att-href="portal_url">Connect your software</a> with <t t-out="o.company_id.name"></t> to create quotes automatically.
+                        </div>
+                        <div class="row mt-5">
+                            <div class="col-6 text-center">
+                                <p>Request by,</p>
+                                <br/><br/><br/>
+                                <p>______________________</p>
+                                <strong>Lead FAT Dept</strong>
+                            </div>
+                            <div class="col-6 text-center">
+                                <p>Acknowledge by,</p>
+                                <br/><br/><br/>
+                                <p>______________________</p>
+                                <strong>Director</strong>
+                            </div>
+                        </div>
+
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>
+
+    
+
+
